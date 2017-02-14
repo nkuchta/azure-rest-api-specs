@@ -4088,6 +4088,32 @@
       },
       "description": "The instance view of a virtual machine boot diagnostics."
     },
+    "VirtualMachineIdentity": {
+      "properties": {
+        "principalId": {
+          "readOnly": true,
+          "type": "string",
+          "description": "The principal id of virtual machine identity."
+        },
+        "tenantId": {
+          "readOnly": true,
+          "type": "string",
+          "description": "The tenant id associated with the virtual machine."
+        },
+        "type": {
+          "type": "string",
+          "description": "The identity type.",
+          "enum": [
+            "SystemAssigned"
+          ],
+          "x-ms-enum": {
+            "name": "ResourceIdentityType",
+            "modelAsString": false
+          }
+        }
+      },
+      "description": "Identity for the virtual machine."
+    },
     "VirtualMachineInstanceView": {
       "properties": {
         "platformUpdateDomain": {
@@ -4180,6 +4206,10 @@
           "readOnly": true,
           "type": "string",
           "description": "Specifies the VM unique ID which is a 128-bits identifier that is encoded and stored in all Azure IaaS VMs SMBIOS and can be read using platform BIOS commands."
+        },
+        "identity": {
+          "$ref": "#/definitions/VirtualMachineIdentity",
+          "description": "The identity of the virtual machine, if configured."
         }
       },
       "description": "Describes the properties of a Virtual Machine."
@@ -4439,6 +4469,32 @@
         "value"
       ],
       "description": "The List Image operation response."
+    },
+    "VirtualMachineScaleSetIdentity": {
+      "properties": {
+        "principalId": {
+          "readOnly": true,
+          "type": "string",
+          "description": "The principal id of virtual machine scale set identity."
+        },
+        "tenantId": {
+          "readOnly": true,
+          "type": "string",
+          "description": "The tenant id associated with the virtual machine scale set."
+        },
+        "type": {
+          "type": "string",
+          "description": "The identity type.",
+          "enum": [
+            "SystemAssigned"
+          ],
+          "x-ms-enum": {
+            "name": "ResourceIdentityType",
+            "modelAsString": false
+          }
+        }
+      },
+      "description": "Identity for the virtual machine scale set."
     },
     "VirtualMachineScaleSetOSProfile": {
       "properties": {
@@ -4809,6 +4865,10 @@
         "singlePlacementGroup": {
           "type": "boolean",
           "description": "When true this limits the scale set to a single placement group, of max size 100 virtual machines."
+        },
+        "identity": {
+          "$ref": "#/definitions/VirtualMachineScaleSetIdentity",
+          "description": "The identity of the virtual machine scale set, if configured."
         }
       },
       "description": "Describes the properties of a Virtual Machine Scale Set."
