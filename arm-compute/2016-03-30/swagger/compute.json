@@ -3826,7 +3826,7 @@
         },
         "identity": {
           "$ref": "#/definitions/VirtualMachineIdentity",
-          "description": "The identity of the virtual machine."
+          "description": "The identity of the virtual machine, if configured."
         }
       },
       "description": "Describes the properties of a Virtual Machine."
@@ -4251,7 +4251,7 @@
         },
         "identity": {
           "$ref": "#/definitions/VirtualMachineScaleSetIdentity",
-          "description": "The identity of the virtual machine scale set."
+          "description": "The identity of the virtual machine scale set, if configured."
         }
       },
       "description": "Describes the properties of a Virtual Machine Scale Set."
