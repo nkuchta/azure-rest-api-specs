@@ -4206,10 +4206,6 @@
           "readOnly": true,
           "type": "string",
           "description": "Specifies the VM unique ID which is a 128-bits identifier that is encoded and stored in all Azure IaaS VMs SMBIOS and can be read using platform BIOS commands."
-        },
-        "identity": {
-          "$ref": "#/definitions/VirtualMachineIdentity",
-          "description": "The identity of the virtual machine, if configured."
         }
       },
       "description": "Describes the properties of a Virtual Machine."
@@ -4231,6 +4227,10 @@
             "$ref": "#/definitions/VirtualMachineExtension"
           },
           "description": "The virtual machine child extension resources."
+        },
+        "identity": {
+          "$ref": "#/definitions/VirtualMachineIdentity",
+          "description": "The identity of the virtual machine, if configured."
         }
       },
       "allOf": [
@@ -4865,10 +4865,6 @@
         "singlePlacementGroup": {
           "type": "boolean",
           "description": "When true this limits the scale set to a single placement group, of max size 100 virtual machines."
-        },
-        "identity": {
-          "$ref": "#/definitions/VirtualMachineScaleSetIdentity",
-          "description": "The identity of the virtual machine scale set, if configured."
         }
       },
       "description": "Describes the properties of a Virtual Machine Scale Set."
@@ -4886,6 +4882,10 @@
         "properties": {
           "x-ms-client-flatten": true,
           "$ref": "#/definitions/VirtualMachineScaleSetProperties"
+        },
+        "identity": {
+          "$ref": "#/definitions/VirtualMachineScaleSetIdentity",
+          "description": "The identity of the virtual machine scale set, if configured."
         }
       },
       "allOf": [
