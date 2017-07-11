@@ -8,6 +8,7 @@ var assert = require("assert"),
   path = require('path'),
   _ = require('lodash'),
   z = require('z-schema'),
+  YAML = require('js-yaml'),
   request = require('request'),
   util = require('util'),
   execSync = require('child_process').execSync;
@@ -24,11 +25,9 @@ exports.compositeSchemaUrl = "https://raw.githubusercontent.com/Azure/autorest/m
 exports.isWindows = (process.platform.lastIndexOf('win') === 0);
 exports.prOnly = undefined !== process.env['PR_ONLY'] ? process.env['PR_ONLY'] : 'false';
 
-exports.globPath = path.join(__dirname, '../', '../', '/**/swagger/*.json');
-exports.swaggers = _(glob.sync(exports.globPath));
-exports.compositeGlobPath = path.join(__dirname, '../', '../', '/**/composite*.json');
-exports.compositeSwaggers = _(glob.sync(exports.compositeGlobPath));
-exports.exampleGlobPath = path.join(__dirname, '../', '../', '/**/examples/*.json');
+exports.globPath = path.join(__dirname, '../', '../', '/specification/**/*.json');
+exports.swaggers = _(glob.sync(exports.globPath, { ignore: ['**/examples/**/*.json', '**/quickstart-templates/*.json', '**/schema/*.json'] }));
+exports.exampleGlobPath = path.join(__dirname, '../', '../', '/specification/**/examples/**/*.json');
 exports.examples = _(glob.sync(exports.exampleGlobPath));
 
 // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
@@ -52,20 +51,12 @@ exports.parseJsonFromFile = function parseJsonFromFile(filepath, callback) {
   fs.readFile(filepath, 'utf8', function (err, data) {
     if (err) return callback(err);
     try {
-      return callback(null, JSON.parse(exports.stripBOM(data)));
+      return callback(null, YAML.safeLoad(exports.stripBOM(data)));
     } catch (error) {
-      let e = new Error(`swagger "${filepath}" is an invalid JSON.\n${util.inspect(err, { depth: null })}`);
+      let e = new Error(`swagger "${filepath}" is an invalid JSON.\n${util.inspect(error, { depth: null })}`);
       return callback(e);
     }
   });
-};
-
-/**
- * Converts command to OS specific command by prepending `mono` for non-windows prOnlySwaggers
- * @returns {string} clr command
- */
-exports.clrCmd = function clrCmd(cmd) {
-  return exports.isWindows ? cmd : ('mono ' + cmd);
 };
 
 /**
@@ -104,6 +95,101 @@ exports.getSourceBranch = function getSourceBranch() {
 };
 
 /**
+ * Gets the PR number. We are using the environment 
+ * variable provided by travis-ci. It is called TRAVIS_PULL_REQUEST. More info can be found here:
+ * https://docs.travis-ci.com/user/environment-variables/#Convenience-Variables
+ * @returns {string} PR number or 'undefined'.
+ */
+exports.getPullRequestNumber = function getPullRequestNumber() {
+  let result = process.env['TRAVIS_PULL_REQUEST'];
+  console.log(`@@@@@ process.env['TRAVIS_PULL_REQUEST'] - ${process.env['TRAVIS_PULL_REQUEST']}`);
+
+  if (!result) {
+    result = 'undefined';
+  }
+
+  return result;
+};
+
+/**
+ * Gets the Repo name. We are using the environment 
+ * variable provided by travis-ci. It is called TRAVIS_REPO_SLUG. More info can be found here:
+ * https://docs.travis-ci.com/user/environment-variables/#Convenience-Variables
+ * @returns {string} PR number or 'undefined'.
+ */
+exports.getRepoName = function getRepoName() {
+  let result = process.env['TRAVIS_REPO_SLUG'];
+  console.log(`@@@@@ process.env['TRAVIS_REPO_SLUG'] - ${process.env['TRAVIS_REPO_SLUG']}`);
+
+  return result;
+};
+
+exports.getTimeStamp = function getTimeStamp() {
+  // We pad each value so that sorted directory listings show the files in chronological order
+  function pad(number) {
+    if (number < 10) {
+      return '0' + number;
+    }
+
+    return number;
+  }
+
+  var now = new Date();
+  return now.getFullYear()
+    + pad(now.getMonth() + 1)
+    + pad(now.getDate())
+    + "_"
+    + pad(now.getHours())
+    + pad(now.getMinutes())
+    + pad(now.getSeconds());
+}
+
+/**
+ * Retrieves list of swagger files to be processed for linting
+ * @returns {Array} list of files to be processed for linting
+ */
+exports.getConfigFilesChangedInPR = function getConfigFilesChangedInPR() {
+  if (exports.prOnly === 'true') {
+    let targetBranch, cmd, filesChanged, swaggerFilesInPR;
+    try {
+      targetBranch = exports.getTargetBranch();
+      execSync(`git fetch origin ${targetBranch}`);
+      cmd = `git diff --name-only HEAD $(git merge-base HEAD FETCH_HEAD)`;
+      filesChanged = execSync(cmd, { encoding: 'utf8' }).split('\n');
+      console.log('>>>>> Files changed in this PR are as follows:');
+      console.log(filesChanged);
+
+      // traverse up to readme.md files
+      const configFiles = new Set();
+      for (let fileChanged of filesChanged) {
+        while (fileChanged.startsWith("specification")) {
+          if (fileChanged.toLowerCase().endsWith("readme.md") && fs.existsSync(fileChanged)) {
+            configFiles.add(fileChanged);
+            break;
+          }
+          // select parent readme
+          const parts = fileChanged.split('/');
+          parts.pop();
+          parts.pop();
+          parts.push("readme.md");
+          fileChanged = parts.join('/');
+        }
+      }
+      filesChanged = [...configFiles.values()];
+
+      console.log('>>>>> Affected configuration files:');
+      console.log(filesChanged);
+
+      return filesChanged;
+    } catch (err) {
+      throw err;
+    }
+  } else {
+    return exports.swaggers;
+  }
+};
+
+/**
  * Retrieves list of swagger files to be processed for linting
  * @returns {Array} list of files to be processed for linting
  */
@@ -113,14 +199,33 @@ exports.getFilesChangedInPR = function getFilesChangedInPR() {
     let targetBranch, cmd, filesChanged, swaggerFilesInPR;
     try {
       targetBranch = exports.getTargetBranch();
-      cmd = `git diff --name-only HEAD $(git merge-base HEAD ${targetBranch})`;
+      execSync(`git fetch origin ${targetBranch}`);
+      cmd = `git diff --name-only HEAD $(git merge-base HEAD FETCH_HEAD)`;
       filesChanged = execSync(cmd, { encoding: 'utf8' });
       console.log('>>>>> Files changed in this PR are as follows:')
       console.log(filesChanged);
       swaggerFilesInPR = filesChanged.split('\n').filter(function (item) {
-        return (item.match(/.*\/swagger\/*/ig) !== null);
+        if (item.match(/.*json$/ig) == null) {
+          return false;
+        }
+        if (item.match(/.*\/examples\/*/ig) !== null) {
+          return false;
+        }
+        if (item.match(/.*\/quickstart-templates\/*/ig) !== null) {
+          return false;
+        }
+        return true;
       });
       console.log(`>>>> Number of swaggers found in this PR: ${swaggerFilesInPR.length}`);
+      
+      var deletedFiles = swaggerFilesInPR.filter(function(swaggerFile){
+        return !fs.existsSync(swaggerFile);
+      });
+      console.log('>>>>> Files deleted in this PR are as follows:')
+      console.log(deletedFiles);
+      // Remove files that have been deleted in the PR
+      swaggerFilesInPR = swaggerFilesInPR.filter(function(x) { return deletedFiles.indexOf(x) < 0 });
+
       result = swaggerFilesInPR;
     } catch (err) {
       throw err;
