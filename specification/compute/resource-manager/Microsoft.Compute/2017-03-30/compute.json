@@ -5426,6 +5426,13 @@
     },
     "VirtualMachineScaleSetExtensionProperties": {
       "properties": {
+        "forceUpdateTag": {
+
+          "type": "string",
+
+          "description": "If a value is provided and is different from the previous value, the extension handler will be forced to update even if the extension configuration has not changed."
+
+        },
         "publisher": {
           "type": "string",
           "description": "The name of the extension handler publisher."
